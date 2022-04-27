@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "baseUrl": "src",
+    "paths": {
+      "*": [
+        "types/*"
+      ]
+    },
+    "jsx": "react",
+    "outDir": "./dist",
+    "module": "CommonJS"
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "__tests__"
+  ],
+  "include": [
+    "./src/**/*.jsx",
+    "./src/**/*.js",
+    "./src/**/*.tsx",
+    "./src/**/*.ts"
+  ]
+}
