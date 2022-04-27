@@ -1,8 +1,8 @@
 /** @type {import('ts-jest/dist/types').InitialOptionsTsJest} */
 module.exports = {
   preset: 'ts-jest',
-  testEnvironment: 'node',
+  testEnvironment: 'jsdom',
   modulePaths: [
-    './src/**/*.test.ts'
+    './tests/**/*.test.tsx'
   ],
 };

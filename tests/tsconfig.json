@@ -1,13 +1,15 @@
 {
   "compilerOptions": {
-    "baseUrl": "src",
+    "baseUrl": ".",
     "paths": {
       "*": [
         "types/*"
       ]
     },
+    "jsx": "react",
+    "outDir": "../dist",
     "esModuleInterop": true,
-    "jsx": "react"
+    "module": "CommonJS"
   },
   "exclude": [
     "node_modules",
@@ -16,6 +18,5 @@
   ],
   "include": [
     "./**/*.tsx",
-    "./**/*.ts"
   ]
 }
