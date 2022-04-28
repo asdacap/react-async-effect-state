@@ -41,6 +41,13 @@ export interface Options {
     * call, the async call is not run in favour of later queued call.
     */
   debounceDelayMs?: number;
+
+  /**
+   * By default, debounce start on additional call when a current call is running. This is to improve
+   * user feedback in case only one request is required. Set this to true to delay even the first
+   * call.
+   */
+  debounceOnInitialCall?: boolean;
 }
 
 /**
@@ -64,7 +71,7 @@ export function useAsyncEffectState<T>(
   const updateQueued = useRef<(() => Promise<T>) | null>(null);
 
   // If a closure is running or debuncing, queue the last update function.
-  const updateRunning = useRef<boolean>(false);
+  const updateRunning = useRef<number>(0);
 
   // Used to determine if the state should be updated due to a new request.
   const currentNonce = useRef<number>(0);
@@ -78,7 +85,7 @@ export function useAsyncEffectState<T>(
     if (updateRunning.current && shouldQueue) {
       updateQueued.current = updateProducer;
     } else {
-      updateRunning.current = true;
+      updateRunning.current += 1;
 
       const updateNonce = currentNonce.current;
 
@@ -89,10 +96,20 @@ export function useAsyncEffectState<T>(
       const shouldUpdateState = () => options?.updateStateOnAllCall
           || (updateNonce === currentNonce.current && updateQueued.current === null);
 
-      let startingPromise = Promise.resolve();
-      if (!queuedUpdate && options?.debounceDelayMs) {
-        startingPromise = waitPromise(options?.debounceDelayMs);
+      let shouldDebounce = false;
+      if (!queuedUpdate) {
+        if (options?.debounceDelayMs) {
+          if (updateRunning.current === 1) {
+            shouldDebounce = options?.debounceOnInitialCall === true;
+          } else {
+            shouldDebounce = true;
+          }
+        }
       }
+
+      const startingPromise = shouldDebounce
+          ? waitPromise(options?.debounceDelayMs)
+          : Promise.resolve();
 
       startingPromise
         .then(() => {
@@ -115,10 +132,10 @@ export function useAsyncEffectState<T>(
           if (updateQueued.current) {
             const queuedProducer = updateQueued.current;
             updateQueued.current = null;
-            updateRunning.current = false;
+            updateRunning.current -= 1;
             update(true, queuedProducer);
           } else {
-            updateRunning.current = false;
+            updateRunning.current -= 1;
           }
         });
     }

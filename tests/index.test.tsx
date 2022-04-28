@@ -213,6 +213,39 @@ describe('useAsyncEffectState', () => {
 
       test.render(0);
       await test.expectNonceRendered(0);
+      expect(mockedWaitPromise.mock.calls.length).toBe(0);
+
+      test.rerender(1);
+      await test.expectNonceRendered(1);
+      await test.expectTotalCallCount(1);
+
+      act(() => {
+        timerResolve();
+      });
+      test.releaseResolver();
+
+      await test.expectTotalCallCount(1);
+
+      test.rerender(2);
+      await test.expectNonceRendered(2);
+
+      expect(mockedWaitPromise.mock.calls.length).toBe(2);
+      await test.expectTotalCallCount(3);
+    });
+
+    it('debounce on every render', async () => {
+      const test = new TestFixture({
+        debounceDelayMs: 1000,
+        debounceOnInitialCall: true,
+      });
+
+      let timerResolve;
+      mockedWaitPromise.mockReturnValue(new Promise((resolve, _) => {
+        timerResolve = resolve;
+      }));
+
+      test.render(0);
+      await test.expectNonceRendered(0);
       expect(mockedWaitPromise.mock.calls.length).toBe(1);
 
       test.rerender(1);
@@ -233,9 +266,6 @@ describe('useAsyncEffectState', () => {
       await test.expectNonceRendered(2);
 
       expect(mockedWaitPromise.mock.calls.length).toBe(3);
-      act(() => {
-        timerResolve();
-      });
       await test.expectTotalCallCount(2);
     });
   });

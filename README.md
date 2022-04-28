@@ -62,9 +62,9 @@ return asyncUIBlock(responseAsync,
 
 ### `useAsyncEffectState(closure, dependencyList, options)`
 
-Encapsulate setting states from async request. This third are an option object that can alter some
-behaviour. Returns a tuple of type `[status,response,error]` which is the current state of the
-request.
+Encapsulate setting states from async request. The third parameter is an option object that can
+alter some behaviour. Returns a tuple of type `[status,response,error]` which is the current state
+of the request.
 
 ```typescript
 export interface Options {
@@ -94,6 +94,13 @@ export interface Options {
      * call, the async call is not run in favour of later queued call.
      */
     debounceDelayMs?: number;
+
+    /**
+     * By default, debounce start on additional call when a current call is running. This is to improve
+     * user feedback in case only one request is required. Set this to true to delay even the first
+     * call.
+     */
+    debounceOnInitialCall?: boolean;
 }
 ```
 
