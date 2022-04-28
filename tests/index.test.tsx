@@ -25,13 +25,13 @@ describe('useAsyncEffectState', () => {
       <>
         <p>Nonce is {nonce}</p>
         {
-                asyncUIBlock(
-                  request,
-                  (testString: string) => <p>{testString}</p>,
-                  (error) => <p>{error.toString()}</p>,
-                  () => <p>Loading...</p>,
-                )
-            }
+          asyncUIBlock(
+              request,
+              (testString: string) => <p>{testString}</p>,
+              (error) => <p>{error.toString()}</p>,
+              () => <p>Loading...</p>,
+          )
+        }
       </>
     );
   }

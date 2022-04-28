@@ -17,7 +17,7 @@ export type AsyncEffectState<T> =
 export interface Options {
   /**
     * By default on subsequent async call, the state will switch back to loading state. Set to true
-    * to disable this and switch directly to final state then the async call resolve.
+    * to disable this and skip directly to final state then the async call resolve.
     */
   noLoadingOnReload?: boolean;
 
@@ -66,7 +66,7 @@ export function useAsyncEffectState<T>(
   // If a closure is running or debuncing, queue the last update function.
   const updateRunning = useRef<boolean>(false);
 
-  // If a closure is running or debuncing, queue the last update function.
+  // Used to determine if the state should be updated due to a new request.
   const currentNonce = useRef<number>(0);
 
   const update = (queuedUpdate: boolean, updateProducer: () => Promise<T>) => {
