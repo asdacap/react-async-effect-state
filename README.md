@@ -32,6 +32,8 @@ return (<p>{response}</p>);
 This library reduce this to:
 
 ```javascript
+import { useAsyncEffectState } from 'react-async-effect-state';
+
 const [status, response, error] = useAsyncEffectState(
     () => fetch('http://example.com'), []);
 
@@ -48,6 +50,8 @@ return (<p>{response}</p>);
 or if you prefer:
 
 ```javascript
+import { useAsyncEffectState, asyncUIBlock } from 'react-async-effect-state';
+
 const responseAsync = useAsyncEffectState(
     () => fetch('http://example.com'), []);
 
