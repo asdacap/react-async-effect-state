@@ -1,6 +1,7 @@
 # React Async Effect State
 
-Encapsulate setting states from async request in React. Also, have some scope creep.
+Encapsulate setting states from async request in React. Also, have some scope creep which includes
+debouncing logic and manual trigger.
 
 Usually on a React component that need to get data from an async call (eg: API call), the call is
 requested in a `useEffect` block, which then set some state on various lifecycle of the call.
