@@ -52,7 +52,12 @@ function MainPage() {
       <h1>No loading on reload, 1s debounce</h1>
       <Clicker options={{ noLoadingOnReload: true, debounceDelayMs: 1000 }} />
       <h1>No loading on reload, 1s debounce, debounce on initial call</h1>
-      <Clicker options={{ noLoadingOnReload: true, debounceDelayMs: 1000, debounceOnInitialCall: true }} />
+      <Clicker options={{
+        noLoadingOnReload: true,
+        debounceDelayMs: 1000,
+        debounceOnInitialCall: true,
+      }}
+      />
     </>
   );
 }

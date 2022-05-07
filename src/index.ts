@@ -43,22 +43,22 @@ export interface Options {
   debounceDelayMs?: number;
 
   /**
-   * By default, debounce start on additional call when a current call is running. This is to improve
-   * user feedback in case only one request is required. Set this to true to delay even the first
-   * call.
+   * By default, debounce start on additional call when a current call is running. This is to
+   * improve user feedback in case only one request is required. Set this to true to delay even the
+   * first call.
    */
   debounceOnInitialCall?: boolean;
 }
 
 /**
- * Encapsulate the standard "useEffect to load async data to state" pattern. Works nearly like
- * useEffect but accept an async function and return the current state of the request.
+ * Behave the same as `useAsyncEffectState`, but the async call must be triggered manually via
+ * the second return value. Useful when the async call needs to be triggered by a button, for
+ * example.
  */
-export function useAsyncEffectState<T>(
+export function useManualAsyncState<T>(
   producer: () => Promise<T>,
-  dependencies: DependencyList,
   options?: Options,
-): AsyncEffectState<T> {
+): [AsyncEffectState<T>, () => void] {
   const [result, setResult] = useState<AsyncEffectState<T>>([
     AsyncState.LOADING,
     null,
@@ -108,8 +108,8 @@ export function useAsyncEffectState<T>(
       }
 
       const startingPromise = shouldDebounce
-          ? waitPromise(options?.debounceDelayMs)
-          : Promise.resolve();
+        ? waitPromise(options?.debounceDelayMs)
+        : Promise.resolve();
 
       startingPromise
         .then(() => {
@@ -141,7 +141,7 @@ export function useAsyncEffectState<T>(
     }
   };
 
-  useEffect(() => {
+  const trigger = () => {
     currentNonce.current += 1;
     update(false, producer);
 
@@ -150,13 +150,13 @@ export function useAsyncEffectState<T>(
         updateQueued.current = null;
       }
     };
-  }, dependencies);
+  };
 
-  return result;
+  return [result, trigger];
 }
 
 /**
- * Utility for resolving AsyncEffectStateReturn to it's respective UI block.
+ * Utility for resolving `AsyncEffectState` to it's respective UI block.
  */
 export function asyncUIBlock<T>(
   state: AsyncEffectState<any>,
@@ -178,4 +178,76 @@ export function asyncUIBlock<T>(
   }
 
   return onSuccess(data);
+}
+
+/**
+ * Encapsulate the standard "useEffect to load async data to state" pattern. Works nearly like
+ * `useEffect` but accept an async function and return the current state of the request.
+ */
+export function useAsyncEffectState<T>(
+  producer: () => Promise<T>,
+  dependencies: DependencyList,
+  options?: Options,
+): AsyncEffectState<T> {
+  const [result, trigger] = useManualAsyncState(producer, options);
+
+  useEffect(trigger, dependencies);
+
+  return result;
+}
+
+/**
+ * Map the input state if resolved through a mapper. The mapper should itself returns an
+ * `AsyncEffectState<U>`. Note that the mapper runs conditionally, meaning it can't have React's
+ * `useState` or any other use* calls including `useAsyncEffectState` which uses `useState` and
+ * `useEffect` internally. It can however, return another `AsyncEffectState<U>` from it's closure.
+ */
+export function flatMap<T, U>(
+  mapper: (input: T) => AsyncEffectState<U>,
+  input: AsyncEffectState<T>,
+): AsyncEffectState<U> {
+  const [state, result, err] = input;
+  if (state !== AsyncState.RESOLVED) {
+    return input;
+  }
+
+  return mapper(result);
+}
+
+/**
+ * Simple synchronous mapper for the `AsyncEffectState` which only map the result when the state is
+ * resolved. Useful for transforming the data without using the async function passed in the
+ * useAsyncEffectState which will probably require another http call.
+ */
+export function map<T, U>(
+  mapper: (input: T) => U,
+  input: AsyncEffectState<T>,
+): AsyncEffectState<U> {
+  const [state, result, err] = input;
+  if (state !== AsyncState.RESOLVED) {
+    return input;
+  }
+
+  return [AsyncState.RESOLVED, mapper(result), null];
+}
+
+/**
+ * Synchronously combine two `AsyncEffectState` into one.
+ */
+export function combine<T1, T2, U>(
+  combiner: (input1: T1, input2: T2) => U,
+  input1: AsyncEffectState<T1>,
+  input2: AsyncEffectState<T2>,
+): AsyncEffectState<U> {
+  const [state1, result1, err1] = input1;
+  if (state1 !== AsyncState.RESOLVED) {
+    return input1;
+  }
+
+  const [state2, result2, err2] = input2;
+  if (state2 !== AsyncState.RESOLVED) {
+    return input2;
+  }
+
+  return [AsyncState.RESOLVED, combiner(result1, result2), null];
 }
