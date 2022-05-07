@@ -147,7 +147,7 @@ Map the input state if resolved through a mapper. The mapper should itself retur
 ### `combine<T1, T2, U>(combiner: (T1, T2) => U, input1: AsyncEffectState<T1>, input2: AsyncEFfectState<T2>) => AsyncEffectState<U>`
 
 Synchronously combine two `AsyncEffectState` into one. Only runs if both input is resolved. Otherwise,
-it will return the first non-resolved input.
+it will return the first errored input, followed by the first loading input.
 
 ### License
 

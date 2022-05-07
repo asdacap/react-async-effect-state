@@ -240,12 +240,21 @@ export function combine<T1, T2, U>(
   input2: AsyncEffectState<T2>,
 ): AsyncEffectState<U> {
   const [state1, result1, err1] = input1;
-  if (state1 !== AsyncState.RESOLVED) {
+  const [state2, result2, err2] = input2;
+
+  if (state1 === AsyncState.ERROR) {
     return input1;
   }
 
-  const [state2, result2, err2] = input2;
-  if (state2 !== AsyncState.RESOLVED) {
+  if (state2 === AsyncState.ERROR) {
+    return input2;
+  }
+
+  if (state1 === AsyncState.LOADING) {
+    return input1;
+  }
+
+  if (state2 === AsyncState.LOADING) {
     return input2;
   }
 

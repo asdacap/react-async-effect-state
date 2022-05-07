@@ -417,7 +417,7 @@ describe('useAsyncEffectState', () => {
       expect(combine(transformer, resolvedState1, errorState)[0]).toEqual(AsyncState.ERROR);
       expect(combine(transformer, errorState, resolvedState2)[0]).toEqual(AsyncState.ERROR);
       expect(combine(transformer, errorState, loadingState)[0]).toEqual(AsyncState.ERROR);
-      expect(combine(transformer, loadingState, errorState)[0]).toEqual(AsyncState.LOADING);
+      expect(combine(transformer, loadingState, errorState)[0]).toEqual(AsyncState.ERROR);
     });
 
     it('returns a resolved state with transformed value when input is resolved', () => {
