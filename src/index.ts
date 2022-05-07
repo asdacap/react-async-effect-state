@@ -4,12 +4,29 @@ import React, {
 import waitPromise from './waitPromise';
 
 export enum AsyncState {
+  /**
+   * An async call is running
+   */
   LOADING,
+
+  /**
+   * The async call returned error
+   */
   ERROR,
+
+  /**
+   * The async call returned successfully
+   */
   RESOLVED,
+
+  /**
+   * No async call happened yet. Not enabled by default.
+   */
+  PENDING,
 }
 
 export type AsyncEffectState<T> =
+    | [AsyncState.PENDING, null, null]
     | [AsyncState.LOADING, null, null]
     | [AsyncState.ERROR, null, Error]
     | [AsyncState.RESOLVED, T, null];
@@ -48,22 +65,37 @@ export interface Options {
    * first call.
    */
   debounceOnInitialCall?: boolean;
+
+  /**
+   * By default, initially the state is AsyncState.LOADING. This is because for most use case,
+   * data is loaded at the start. But when using `useManualAsyncState`, a separate state for before
+   * the trigger is called is probably desired, in which case, this flag is turned on by default.
+   * Otherwise, it is false by default.
+   */
+  initiallyPending?: boolean;
 }
 
 /**
  * Behave the same as `useAsyncEffectState`, but the async call must be triggered manually via
  * the second return value. Useful when the async call needs to be triggered by a button, for
- * example.
+ * example. A re-trigger will have the same logic as if a `useEffect` block is re-called. It is
+ * the app's responsibility to block additional trigger if not desired.
  */
 export function useManualAsyncState<T>(
   producer: () => Promise<T>,
   options?: Options,
 ): [AsyncEffectState<T>, () => void] {
+  const effectiveOptions = {
+    ...{ initiallyPending: true },
+    ...(options || {}),
+  };
+
   const [result, setResult] = useState<AsyncEffectState<T>>([
-    AsyncState.LOADING,
+    effectiveOptions?.initiallyPending ? AsyncState.PENDING : AsyncState.LOADING,
     null,
     null,
   ]);
+  const [currentState, data, err] = result;
 
   // When this function gets re-executed, a new producer is created which have it's own closure
   // variables. So the queued update store the last producer function so that the right closure
@@ -78,7 +110,7 @@ export function useManualAsyncState<T>(
 
   const update = (queuedUpdate: boolean, updateProducer: () => Promise<T>) => {
     let shouldQueue = false;
-    if (!options?.disableRequestDedup && !options?.debounceDelayMs) {
+    if (!effectiveOptions?.disableRequestDedup && !effectiveOptions?.debounceDelayMs) {
       shouldQueue = true;
     }
 
@@ -89,18 +121,18 @@ export function useManualAsyncState<T>(
 
       const updateNonce = currentNonce.current;
 
-      if (!options?.noLoadingOnReload) {
+      if (!effectiveOptions?.noLoadingOnReload || currentState === AsyncState.PENDING) {
         setResult([AsyncState.LOADING, null, null]);
       }
 
-      const shouldUpdateState = () => options?.updateStateOnAllCall
+      const shouldUpdateState = () => effectiveOptions?.updateStateOnAllCall
           || (updateNonce === currentNonce.current && updateQueued.current === null);
 
       let shouldDebounce = false;
       if (!queuedUpdate) {
-        if (options?.debounceDelayMs) {
+        if (effectiveOptions?.debounceDelayMs) {
           if (updateRunning.current === 1) {
-            shouldDebounce = options?.debounceOnInitialCall === true;
+            shouldDebounce = effectiveOptions?.debounceOnInitialCall === true;
           } else {
             shouldDebounce = true;
           }
@@ -108,7 +140,7 @@ export function useManualAsyncState<T>(
       }
 
       const startingPromise = shouldDebounce
-        ? waitPromise(options?.debounceDelayMs)
+        ? waitPromise(effectiveOptions?.debounceDelayMs)
         : Promise.resolve();
 
       startingPromise
@@ -163,12 +195,20 @@ export function asyncUIBlock<T>(
   onSuccess: (data: T) => React.ReactNode,
   onError: (error: Error) => React.ReactNode,
   onLoading?: () => React.ReactNode,
+  onPending?: () => React.ReactNode,
 ): React.ReactNode | undefined {
   const [status, data, error] = state;
 
   if (status === AsyncState.LOADING) {
     if (onLoading !== undefined) {
       return onLoading();
+    }
+    return undefined;
+  }
+
+  if (status === AsyncState.PENDING) {
+    if (onPending !== undefined) {
+      return onPending();
     }
     return undefined;
   }
@@ -189,7 +229,12 @@ export function useAsyncEffectState<T>(
   dependencies: DependencyList,
   options?: Options,
 ): AsyncEffectState<T> {
-  const [result, trigger] = useManualAsyncState(producer, options);
+  const effectiveOptions = {
+    ...{ initiallyPending: false },
+    ...(options || {}),
+  };
+
+  const [result, trigger] = useManualAsyncState(producer, effectiveOptions);
 
   useEffect(trigger, dependencies);
 
@@ -247,6 +292,14 @@ export function combine<T1, T2, U>(
   }
 
   if (state2 === AsyncState.ERROR) {
+    return input2;
+  }
+
+  if (state1 === AsyncState.PENDING) {
+    return input1;
+  }
+
+  if (state2 === AsyncState.PENDING) {
     return input2;
   }
 

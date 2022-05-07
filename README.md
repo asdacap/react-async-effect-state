@@ -1,9 +1,10 @@
 # React Async Effect State
 
-Encapsulate setting states from async request in React. Usually on a React component that need to 
-get data from an async call (eg: API call), the call is requested in a `useEffect` block, which
-then set some state on various lifecycle of the call. Including some error handling, this 
-would look like this:
+Encapsulate setting states from async request in React. Also, have some scope creep.
+
+Usually on a React component that need to get data from an async call (eg: API call), the call is
+requested in a `useEffect` block, which then set some state on various lifecycle of the call.
+Including some error handling, this would look like this:
 
 ```javascript
 const [requestState, setRequestState] = useState(["loading", null, null]);
@@ -105,13 +106,22 @@ export interface Options {
      * call.
      */
     debounceOnInitialCall?: boolean;
+
+    /**
+     * By default, initially the state is AsyncState.LOADING. This is because for most use case,
+     * data is loaded at the start. But when using `useManualAsyncState`, a separate state for before
+     * the trigger is called is probably desired, in which case, this flag is turned on by default.
+     */
+    initiallyPending?: boolean;
+    
 }
 ```
 
-### `asyncUIBlock<T>(AsyncEffectState<T>, onResolve: (T) => React.ReactNode, onReject: (Error) => React.ReactNode, onLoading: () => React.ReactNode) => React.ReactNode` 
+### `asyncUIBlock<T>(AsyncEffectState<T>, onResolve: (T) => React.ReactNode, onReject: (Error) => React.ReactNode, onLoading?: () => React.ReactNode, onPending?: () => React.ReactNode) => React.ReactNode` 
 
 A small syntactical sugar that runs one of the three closure and returns its response 
-depending on the current request state.
+depending on the current request state. On loading and on pending is optional and will return
+undefined if not specified.
 
 ### `useManualAsyncState<T>(closure: () => Promise<T>, options: Options) => [AsyncEffectState<T>, () => void]`
 
@@ -127,9 +137,14 @@ const [responseAsync, trigger] = useManualAsyncState(
 return asyncUIBlock(responseAsync,
     (response) => (<p>{response}</p>),
     (error) => (<p>An error occured {error.toString()}</p>),
-    () => (<p>Loading data... <button onClick={() => trigger()}>Actually start loading</button></p>)
+    () => (<p>Loading data...</p>),
+    () => (<p>No call yet... <button onClick={() => trigger()}>Actually start loading</button></p>),
 );
 ```
+
+Note that, with `debounceOnInitialCall` off, usually async call will be called immediately, so if
+you change some state, and immediately call trigger, then the async call closure will not get the
+updated state.
 
 ### `map<T,U>(mapper: (T) => U, input: AsyncEffectState<T>) => AsyncEfectState<U>`
 

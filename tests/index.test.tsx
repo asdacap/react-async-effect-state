@@ -53,7 +53,7 @@ describe('useAsyncEffectState', () => {
 
     private blocker: Promise<void>;
 
-    private renderResult: RenderResult;
+    protected renderResult: RenderResult;
 
     private blockerResolver: (value?: any) => void;
 
@@ -297,20 +297,18 @@ describe('useAsyncEffectState', () => {
                 (testString: string) => <p>{testString}</p>,
                 (error) => <p>{error.toString()}</p>,
                 () => <p>Loading...</p>,
+                () => <p>Pending...</p>,
               )
             }
         </>
       );
     }
 
-    class ManualTestFixture {
-      totalCallCount = 0;
-
-      private renderResult: RenderResult;
-
+    class ManualTestFixture extends TestFixture {
       private user: UserEvent;
 
       constructor() {
+        super();
         this.user = userEvent.setup();
       }
 
@@ -329,26 +327,23 @@ describe('useAsyncEffectState', () => {
         await this.user.click(await screen.findByText('Button'));
       }
 
-      async expectTotalCallCount(callCount: number) {
-        await waitFor(() => expect(this.totalCallCount).toEqual(callCount));
-      }
-
-      async expectLoadingRendered() {
-        await waitFor(() => screen.findByText('Loading...'));
-      }
-
-      async expectSampleStringRendered() {
-        await waitFor(() => screen.findByText('Sample string'));
+      async expectPendingRendered() {
+        await waitFor(() => screen.findByText('Pending...'));
       }
     }
 
-    it('should render loading not render resulting string until triggered', async () => {
+    it('should render pending not render resulting string until triggered', async () => {
       const test = new ManualTestFixture();
       test.render();
-      await test.expectLoadingRendered();
+
+      await test.expectPendingRendered();
       await expect(() => test.expectSampleStringRendered()).rejects.toThrow();
       await test.expectTotalCallCount(0);
+
       await test.clickButton();
+      await test.expectLoadingRendered();
+      await test.releaseResolver();
+
       await test.expectTotalCallCount(1);
       await test.expectSampleStringRendered();
     });
