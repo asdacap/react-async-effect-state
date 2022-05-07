@@ -64,7 +64,7 @@ return asyncUIBlock(responseAsync,
 
 ## Usage
 
-### `useAsyncEffectState(closure, dependencyList, options)`
+### `useAsyncEffectState<T>(closure: () => Promise<T>, dependencyList: DependencyList, options: Options) => AsyncEffectState<T>`
 
 Encapsulate setting states from async request. The third parameter is an option object that can
 alter some behaviour. Returns a tuple of type `[status,response,error]` which is the current state
@@ -108,10 +108,46 @@ export interface Options {
 }
 ```
 
-### `asyncUIBlock([status, response, error], onResolve, onReject, onLoading)` 
+### `asyncUIBlock<T>(AsyncEffectState<T>, onResolve: (T) => React.ReactNode, onReject: (Error) => React.ReactNode, onLoading: () => React.ReactNode) => React.ReactNode` 
 
 A small syntactical sugar that runs one of the three closure and returns its response 
 depending on the current request state.
+
+### `useManualAsyncState<T>(closure: () => Promise<T>, options: Options) => [AsyncEffectState<T>, () => void]`
+
+Behave the same as `useAsyncEffectState`, but the async call must be triggered manually via the 
+second return value. Useful when the async call needs to be triggered by a button, for example:
+
+```javascript
+import { useManualAsyncState, asyncUIBlock } from 'react-async-effect-state';
+
+const [responseAsync, trigger] = useManualAsyncState(
+    () => fetch('http://example.com'), []);
+
+return asyncUIBlock(responseAsync,
+    (response) => (<p>{response}</p>),
+    (error) => (<p>An error occured {error.toString()}</p>),
+    () => (<p>Loading data... <button onClick={() => trigger()}>Actually start loading</button></p>)
+);
+```
+
+### `map<T,U>(mapper: (T) => U, input: AsyncEffectState<T>) => AsyncEfectState<U>`
+
+Simple synchronous mapper for an `AsyncEffectState` which only map the result when the state is
+resolved. Useful for transforming the data without using the async function passed in the
+useAsyncEffectState which depending on youar use case will probably require another http call.
+
+### `flatMap<T,U>(mapper: (T) => AsyncEffectState<U>, input: AsyncEffectState<T>) => AsyncEfectState<U>`
+
+Map the input state if resolved through a mapper. The mapper should itself returns an
+`AsyncEffectState<U>`. Note that the mapper runs conditionally, meaning it can't have React's
+`useState` or any other use* calls including `useAsyncEffectState` which uses `useState` and
+`useEffect` internally. It can however, return another `AsyncEffectState<U>` from it's closure.
+
+### `combine<T1, T2, U>(combiner: (T1, T2) => U, input1: AsyncEffectState<T1>, input2: AsyncEFfectState<T2>) => AsyncEffectState<U>`
+
+Synchronously combine two `AsyncEffectState` into one. Only runs if both input is resolved. Otherwise,
+it will return the first non-resolved input.
 
 ### License
 
