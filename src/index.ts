@@ -84,14 +84,15 @@ export interface Options {
 export function useManualAsyncState<T>(
   producer: () => Promise<T>,
   options?: Options,
-): [AsyncEffectState<T>, () => void] {
+): [AsyncEffectState<T>, () => void, () => void] {
   const effectiveOptions = {
     ...{ initiallyPending: true },
     ...(options || {}),
   };
 
+  const initialState = effectiveOptions?.initiallyPending ? AsyncState.PENDING : AsyncState.LOADING;
   const [result, setResult] = useState<AsyncEffectState<T>>([
-    effectiveOptions?.initiallyPending ? AsyncState.PENDING : AsyncState.LOADING,
+    initialState,
     null,
     null,
   ]);
@@ -178,13 +179,22 @@ export function useManualAsyncState<T>(
     update(false, producer);
 
     return () => {
-      if (updateQueued.current) {
-        updateQueued.current = null;
-      }
+      // For use with useEffect. This cancel queued call.
+      updateQueued.current = null;
     };
   };
 
-  return [result, trigger];
+  const reset = () => {
+    setResult([initialState, null, null]);
+
+    // Don't update state when/if current call is done
+    currentNonce.current = null;
+
+    // Also cancel any queued call
+    updateQueued.current = null;
+  };
+
+  return [result, trigger, reset];
 }
 
 /**

@@ -63,6 +63,69 @@ return asyncUIBlock(responseAsync,
 );
 ```
 
+### Debounce
+
+Occasionally, you'll encounter a situation where you need a search box and you don't want the call
+to be triggered on every key press. By default this library only queue one call, and only one call
+is running at a time. Therefore, new request for the key will be triggered only after previous call
+complete. But you can also specify a debounce duration so that a call will not start until after 
+some delay and no other new call is queued (user stopped entering key). For example:
+
+```javascript
+import { useAsyncEffectState } from 'react-async-effect-state';
+
+const [query, setQuery] = useState('');
+const [status, response, error] = useAsyncEffectState(
+    () => fetch('http://example.com&q=' + query),
+    [query],
+    {
+        debounceDelayMs: 300   
+    });
+
+if (status === AsyncState.LOADING) {
+    return (<p>Loading data...</p>);
+}
+if (status === AsyncState.ERROR) {
+    return (<p>An error occured {error.toString()}</p>);
+}
+
+return (<>
+    <input value={query} onChange={(e) => setQuery(e.target.value)} />
+    <p>{response}</p>
+</>);
+```
+
+### Manual trigger
+
+If you need to trigger the call manually, you can use a different variant, `useManualAsyncState`
+which returns a trigger and reset method.
+
+```javascript
+import { useAsyncEffectState } from 'react-async-effect-state';
+
+const [asyncState, trigger, reset] = useManualAsyncstate(
+    () => fetch('http://example.com'));
+const [status, response, error] = asyncState;
+
+if (status === AsyncState.PENDING) {
+    return (<>
+        <p>No call yet</p>
+        <button onClick={trigger}>Start</button>
+    </>);
+}
+if (status === AsyncState.LOADING) {
+    return (<p>Loading data...</p>);
+}
+if (status === AsyncState.ERROR) {
+    return (<p>An error occured {error.toString()}</p>);
+}
+
+return (<>
+    <p>{response}</p>
+    <button onClick={reset}>Reset to pending</button>
+</>);
+```
+
 ## Usage
 
 ### `useAsyncEffectState<T>(closure: () => Promise<T>, dependencyList: DependencyList, options: Options) => AsyncEffectState<T>`
@@ -123,7 +186,7 @@ A small syntactical sugar that runs one of the three closure and returns its res
 depending on the current request state. On loading and on pending is optional and will return
 undefined if not specified.
 
-### `useManualAsyncState<T>(closure: () => Promise<T>, options: Options) => [AsyncEffectState<T>, () => void]`
+### `useManualAsyncState<T>(closure: () => Promise<T>, options: Options) => [AsyncEffectState<T>, () => () => void, () => void]`
 
 Behave the same as `useAsyncEffectState`, but the async call must be triggered manually via the 
 second return value. Useful when the async call needs to be triggered by a button, for example:
@@ -131,18 +194,26 @@ second return value. Useful when the async call needs to be triggered by a butto
 ```javascript
 import { useManualAsyncState, asyncUIBlock } from 'react-async-effect-state';
 
-const [responseAsync, trigger] = useManualAsyncState(
+const [responseAsync, trigger, reset] = useManualAsyncState(
     () => fetch('http://example.com'), []);
 
 return asyncUIBlock(responseAsync,
-    (response) => (<p>{response}</p>),
-    (error) => (<p>An error occured {error.toString()}</p>),
+    (response) => (<p>{response} <button onClick={reset}>Reset</button></p>),
+    (error) => (<p>An error occured {error.toString()} <button onClick={trigger}>Retry</button></p>),
     () => (<p>Loading data...</p>),
-    () => (<p>No call yet... <button onClick={() => trigger()}>Actually start loading</button></p>),
+    () => (<p>No call yet... <button onClick={trigger}>Actually start loading</button></p>),
 );
 ```
 
-Note that, with `debounceOnInitialCall` off, usually async call will be called immediately, so if
+The trigger function returns another function that can be used to cancel state change when the
+call is complete. This is useful in a `useEffect` call.
+
+The third return value is a reset function for changing the state back to pending.
+
+Note that, it is your responsibility to prevent `trigger` from being called more than once if that
+is your intention.
+
+Also, with `debounceOnInitialCall` off, usually async call will be called immediately, so if
 you change some state, and immediately call trigger, then the async call closure will not get the
 updated state.
 

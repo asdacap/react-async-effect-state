@@ -286,11 +286,12 @@ describe('useAsyncEffectState', () => {
       options?: Options
     }): any {
       const { asyncFunction, options } = props;
-      const [request, trigger] = useManualAsyncState(asyncFunction, options);
+      const [request, trigger, reset] = useManualAsyncState(asyncFunction, options);
 
       return (
         <>
-          <button type="button" onClick={() => trigger()}>Button</button>
+          <button type="button" onClick={() => trigger()}>Trigger</button>
+          <button type="button" onClick={() => reset()}>Reset</button>
           {
               asyncUIBlock(
                 request,
@@ -323,8 +324,12 @@ describe('useAsyncEffectState', () => {
         />);
       }
 
-      async clickButton() {
-        await this.user.click(await screen.findByText('Button'));
+      async clickTrigger() {
+        await this.user.click(await screen.findByText('Trigger'));
+      }
+
+      async clickReset() {
+        await this.user.click(await screen.findByText('Reset'));
       }
 
       async expectPendingRendered() {
@@ -340,12 +345,15 @@ describe('useAsyncEffectState', () => {
       await expect(() => test.expectSampleStringRendered()).rejects.toThrow();
       await test.expectTotalCallCount(0);
 
-      await test.clickButton();
+      await test.clickTrigger();
       await test.expectLoadingRendered();
       await test.releaseResolver();
 
       await test.expectTotalCallCount(1);
       await test.expectSampleStringRendered();
+
+      await test.clickReset();
+      await test.expectPendingRendered();
     });
   });
 

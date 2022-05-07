@@ -18,9 +18,9 @@ function Clicker(props: { options: Options, manual?: boolean, noRetrigger?: bool
     return `Request from click count ${clickCount}`;
   };
 
-  const [request, trigger] = manual
+  const [request, trigger, reset] = manual
     ? useManualAsyncState(asyncClosure, options)
-    : [useAsyncEffectState(asyncClosure, [clickCount], options), () => {}];
+    : [useAsyncEffectState(asyncClosure, [clickCount], options), () => {}, () => {}];
 
   const onButtonClick = () => {
     if (noRetrigger && request[0] !== AsyncState.PENDING) {
@@ -36,7 +36,7 @@ function Clicker(props: { options: Options, manual?: boolean, noRetrigger?: bool
     <>
       {asyncUIBlock(
         request,
-        (text: string) => (<p>{text}</p>),
+        (text: string) => (<p>{text} {manual && <button type="button" onClick={reset}>Reset</button>}</p>),
         (error) => (<p>{error.toString()}</p>),
         () => (<p>Loading...</p>),
         () => (<p>Pending...</p>),
@@ -80,7 +80,7 @@ function MainPage() {
       <Clicker options={{}} manual />
       <h1>Manual Clicker Without Re-Trigger</h1>
       <Clicker options={{}} manual noRetrigger />
-      <h1>Manual Clicker With No Initial Loading</h1>
+      <h1>Manual Clicker With No Initial Pending State</h1>
       <Clicker options={{ initiallyPending: false }} manual />
     </>
   );
