@@ -1,6 +1,6 @@
 {
   "name": "react-async-effect-state",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Encapsulate using states from async request in React.",
   "main": "./dist/index.js",
   "type": "commonjs",
